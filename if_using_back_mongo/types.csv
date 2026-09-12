@@ -1,0 +1,12 @@
+type,id,label_fr,label_en,players_number
+Global_Spell,1,Champions avec des compétences globales,Champs with Global Abilities,3+
+Large_Spell,2,Champions avec un ultime à large zone d'effets,Champs with large AOE ult,3+
+Heal_Shield_Champ,3,Champions à boucliers ou soins,Champs with heals or shields,3+
+Above_Death_Champ,4,Champions qui défient la mort,Champs that defy death,3+
+Invisi_Champ,5,Champions invisibles / furtifs,Champs with stealth,3+
+Poke_Champ,6,"Champions qui ""pokent""",Poke Champs,3+
+Pet_Champ,7,Champions qui invoquent,Champs with summon or pet,5
+Move_Spell,8,Champions qui restreignent les déplacements ,Champs with displacements,3+
+Trap_Spell,9,Champions qui posent des pièges,Champs with traps,3+
+Create_Ground_Spell,10,Champions qui crééent des terrains,Champs with terrain création,3+
+2_More_CC_Spell,11,Champions possédant 2 CC ou +,Champs with 2+ immobilitzing spells,3+

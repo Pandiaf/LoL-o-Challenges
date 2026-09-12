@@ -1,0 +1,7 @@
+class_fr,class_en,id
+Assassin,Assassin,1
+Combattant,Fighter,2
+Mage,Mage,3
+Tireur,Marksman,4
+Support,Support,5
+Tank,Tank,6

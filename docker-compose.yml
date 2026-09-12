@@ -1,0 +1,13 @@
+services:
+  frontend:
+    build: frontend
+    container_name: ${APP_VER_NAME}-frontend
+    ports:
+      - "${NUXT_FRONTEND_PORT}:3000"
+    restart: always
+    env_file: .env
+    volumes:
+      - ./frontend:/application
+      - /application/node_modules
+      - /application/.nuxt
+      - /application/.output
