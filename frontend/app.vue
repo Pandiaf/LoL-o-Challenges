@@ -11,9 +11,8 @@ const search = ref("");
 const selectedClasses = ref<number[]>([]);
 const selectedTypes = ref<number[]>([]);
 const selectedRegions = ref<number[]>([]);
-const selectedPlayerCounts = ref<string[]>([]);
 
-function toggle<T>(list: T[], id: T) {
+function toggle(list: number[], id: number) {
   const i = list.indexOf(id);
   if (i === -1) list.push(id);
   else list.splice(i, 1);
@@ -23,7 +22,6 @@ function reset() {
   selectedClasses.value = [];
   selectedTypes.value = [];
   selectedRegions.value = [];
-  selectedPlayerCounts.value = [];
   search.value = "";
 }
 
@@ -32,7 +30,6 @@ const hasFilters = computed(
     selectedClasses.value.length > 0 ||
     selectedTypes.value.length > 0 ||
     selectedRegions.value.length > 0 ||
-    selectedPlayerCounts.value.length > 0 ||
     search.value.trim() !== ""
 );
 
@@ -46,8 +43,12 @@ const regionById = computed(
   () => new Map((regions.value ?? []).map((r) => [r.id, r]))
 );
 
-const playerCounts = computed(() =>
-  Array.from(new Set((types.value ?? []).map((t) => t.players_number))).sort()
+// Types scindés en deux colonnes selon le nombre de joueurs requis
+const typesThreePlus = computed(() =>
+  (types.value ?? []).filter((t) => t.players_number === "3+")
+);
+const typesFive = computed(() =>
+  (types.value ?? []).filter((t) => t.players_number !== "3+")
 );
 
 const filtered = computed(() => {
@@ -64,12 +65,7 @@ const filtered = computed(() => {
       const matchRegion =
         selectedRegions.value.length === 0 ||
         selectedRegions.value.every((r) => (champ.regions ?? []).includes(r));
-      const matchPlayerCount =
-        selectedPlayerCounts.value.length === 0 ||
-        selectedPlayerCounts.value.every((pn) =>
-          champ.types.some((t) => typeById.value.get(t)?.players_number === pn)
-        );
-      return matchName && matchClass && matchType && matchRegion && matchPlayerCount;
+      return matchName && matchClass && matchType && matchRegion;
     })
     .sort((a, b) => a.name.localeCompare(b.name, "fr"));
 });
@@ -189,7 +185,7 @@ onMounted(() => {
               <h2
                 class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400"
               >
-                Classes
+                Classes (5 joueurs)
               </h2>
               <span
                 v-if="selectedClasses.length"
@@ -222,7 +218,7 @@ onMounted(() => {
               <h2
                 class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400"
               >
-                Régions
+                Régions (5 joueurs)
               </h2>
               <span
                 v-if="selectedRegions.length"
@@ -346,55 +342,53 @@ onMounted(() => {
                 {{ selectedTypes.length }}
               </span>
             </div>
-            <div class="flex max-h-[60vh] flex-wrap gap-1.5 overflow-y-auto pr-1">
-              <button
-                v-for="t in types"
-                :key="t.id"
-                type="button"
-                :aria-pressed="selectedTypes.includes(t.id)"
-                class="h-fit cursor-pointer rounded-full border px-3 py-1.5 text-[0.82rem] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20"
-                :class="
-                  selectedTypes.includes(t.id)
-                    ? 'border-orange-600 bg-orange-600 text-white dark:border-orange-500 dark:bg-orange-500'
-                    : 'border-slate-200 bg-white text-slate-900 hover:border-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:border-slate-100'
-                "
-                @click="toggle(selectedTypes, t.id)"
-              >
-                {{ t.label_fr }}
-              </button>
-            </div>
-          </section>
 
-          <section class="flex min-h-0 flex-col">
-            <div class="mb-3 flex items-center gap-2">
-              <h2
-                class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400"
-              >
-                Nombre de joueurs
-              </h2>
-              <span
-                v-if="selectedPlayerCounts.length"
-                class="grid h-[1.15rem] min-w-[1.15rem] place-items-center rounded-full bg-purple-600 px-1.5 text-[0.68rem] font-bold text-white dark:bg-purple-500"
-              >
-                {{ selectedPlayerCounts.length }}
-              </span>
-            </div>
-            <div class="flex flex-wrap gap-1.5">
-              <button
-                v-for="pn in playerCounts"
-                :key="pn"
-                type="button"
-                :aria-pressed="selectedPlayerCounts.includes(pn)"
-                class="h-fit cursor-pointer rounded-full border px-3 py-1.5 text-[0.82rem] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20"
-                :class="
-                  selectedPlayerCounts.includes(pn)
-                    ? 'border-purple-600 bg-purple-600 text-white dark:border-purple-500 dark:bg-purple-500'
-                    : 'border-slate-200 bg-white text-slate-900 hover:border-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:border-slate-100'
-                "
-                @click="toggle(selectedPlayerCounts, pn)"
-              >
-                {{ pn }} joueurs
-              </button>
+            <div class="grid grid-cols-2 gap-3">
+              <div class="flex min-w-0 flex-col gap-1.5">
+                <span
+                  class="mb-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500"
+                >
+                  3+ joueurs
+                </span>
+                <button
+                  v-for="t in typesThreePlus"
+                  :key="t.id"
+                  type="button"
+                  :aria-pressed="selectedTypes.includes(t.id)"
+                  class="cursor-pointer rounded-full border px-2.5 py-1.5 text-left text-[0.78rem] leading-tight transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20"
+                  :class="
+                    selectedTypes.includes(t.id)
+                      ? 'border-orange-600 bg-orange-600 text-white dark:border-orange-500 dark:bg-orange-500'
+                      : 'border-slate-200 bg-white text-slate-900 hover:border-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:border-slate-100'
+                  "
+                  @click="toggle(selectedTypes, t.id)"
+                >
+                  {{ t.label_fr }}
+                </button>
+              </div>
+
+              <div class="flex min-w-0 flex-col gap-1.5">
+                <span
+                  class="mb-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500"
+                >
+                  5 joueurs
+                </span>
+                <button
+                  v-for="t in typesFive"
+                  :key="t.id"
+                  type="button"
+                  :aria-pressed="selectedTypes.includes(t.id)"
+                  class="cursor-pointer rounded-full border px-2.5 py-1.5 text-left text-[0.78rem] leading-tight transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20"
+                  :class="
+                    selectedTypes.includes(t.id)
+                      ? 'border-orange-600 bg-orange-600 text-white dark:border-orange-500 dark:bg-orange-500'
+                      : 'border-slate-200 bg-white text-slate-900 hover:border-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:border-slate-100'
+                  "
+                  @click="toggle(selectedTypes, t.id)"
+                >
+                  {{ t.label_fr }}
+                </button>
+              </div>
             </div>
           </section>
 
