@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import type { Champion } from "~/data/champions";
+
 const { data: champions, pending: pC, error: eC } = useChampions();
 const { data: classes, pending: pCl, error: eCl } = useClasses();
 const { data: types, pending: pT, error: eT } = useTypes();
@@ -48,24 +50,91 @@ function playerCountLabel(playersNumber: string) {
   return playersNumber === "3+" ? "3 joueurs ou +" : "5 joueurs";
 }
 
-const filtered = computed(() => {
+// Prédicat générique : un champion matche-t-il les filtres actuels ?
+// On peut "ignorer" une catégorie en passant un tableau vide pour elle,
+// ce qui sert à calculer les options encore possibles dans cette catégorie.
+function matchesFilters(
+  champ: Champion,
+  overrides: {
+    classesFilter?: number[];
+    typesFilter?: number[];
+    regionsFilter?: number[];
+  } = {}
+) {
   const q = search.value.trim().toLowerCase();
-  return (champions.value ?? [])
-    .filter((champ) => {
-      const matchName = !q || champ.name.toLowerCase().includes(q);
-      const matchClass =
-        selectedClasses.value.length === 0 ||
-        selectedClasses.value.every((c) => champ.classes.includes(c));
-      const matchType =
-        selectedTypes.value.length === 0 ||
-        selectedTypes.value.every((t) => champ.types.includes(t));
-      const matchRegion =
-        selectedRegions.value.length === 0 ||
-        selectedRegions.value.every((r) => (champ.regions ?? []).includes(r));
-      return matchName && matchClass && matchType && matchRegion;
-    })
-    .sort((a, b) => a.name.localeCompare(b.name, "fr"));
+  const classesFilter = overrides.classesFilter ?? selectedClasses.value;
+  const typesFilter = overrides.typesFilter ?? selectedTypes.value;
+  const regionsFilter = overrides.regionsFilter ?? selectedRegions.value;
+
+  const matchName = !q || champ.name.toLowerCase().includes(q);
+  const matchClass =
+    classesFilter.length === 0 ||
+    classesFilter.every((c) => champ.classes.includes(c));
+  const matchType =
+    typesFilter.length === 0 ||
+    typesFilter.every((t) => champ.types.includes(t));
+  const matchRegion =
+    regionsFilter.length === 0 ||
+    regionsFilter.every((r) => (champ.regions ?? []).includes(r));
+
+  return matchName && matchClass && matchType && matchRegion;
+}
+
+const filtered = computed(() =>
+  (champions.value ?? [])
+    .filter((champ) => matchesFilters(champ))
+    .sort((a, b) => a.name.localeCompare(b.name, "fr"))
+);
+
+// Pour chaque facette : quels ids restent atteignables compte tenu
+// des AUTRES filtres actifs (sans tenir compte du filtre de cette facette elle-même).
+const availableClassIds = computed(() => {
+  const ids = new Set<number>();
+  for (const champ of champions.value ?? []) {
+    if (matchesFilters(champ, { classesFilter: [] })) {
+      champ.classes.forEach((c) => ids.add(c));
+    }
+  }
+  return ids;
 });
+
+const availableTypeIds = computed(() => {
+  const ids = new Set<number>();
+  for (const champ of champions.value ?? []) {
+    if (matchesFilters(champ, { typesFilter: [] })) {
+      champ.types.forEach((t) => ids.add(t));
+    }
+  }
+  return ids;
+});
+
+const availableRegionIds = computed(() => {
+  const ids = new Set<number>();
+  for (const champ of champions.value ?? []) {
+    if (matchesFilters(champ, { regionsFilter: [] })) {
+      (champ.regions ?? []).forEach((r) => ids.add(r));
+    }
+  }
+  return ids;
+});
+
+// Les options affichées : celles encore possibles, + celles déjà cochées
+// (pour ne jamais faire disparaître un bouton qu'on vient de sélectionner).
+const visibleClasses = computed(() =>
+  (classes.value ?? []).filter(
+    (c) => availableClassIds.value.has(c.id) || selectedClasses.value.includes(c.id)
+  )
+);
+const visibleTypes = computed(() =>
+  (types.value ?? []).filter(
+    (t) => availableTypeIds.value.has(t.id) || selectedTypes.value.includes(t.id)
+  )
+);
+const visibleRegions = computed(() =>
+  (regions.value ?? []).filter(
+    (r) => availableRegionIds.value.has(r.id) || selectedRegions.value.includes(r.id)
+  )
+);
 
 // --- Dark mode ---
 const isDark = ref(false);
@@ -182,7 +251,7 @@ onMounted(() => {
               <h2
                 class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400"
               >
-                Classes (5 joueurs)
+                Classes
               </h2>
               <span
                 v-if="selectedClasses.length"
@@ -193,7 +262,7 @@ onMounted(() => {
             </div>
             <div class="flex max-h-[40vh] flex-wrap gap-1.5 overflow-y-auto pr-1">
               <button
-                v-for="c in classes"
+                v-for="c in visibleClasses"
                 :key="c.id"
                 type="button"
                 :aria-pressed="selectedClasses.includes(c.id)"
@@ -215,7 +284,7 @@ onMounted(() => {
               <h2
                 class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400"
               >
-                Régions (5 joueurs)
+                Régions
               </h2>
               <span
                 v-if="selectedRegions.length"
@@ -226,7 +295,7 @@ onMounted(() => {
             </div>
             <div class="flex max-h-[40vh] flex-wrap gap-1.5 overflow-y-auto pr-1">
               <button
-                v-for="r in regions"
+                v-for="r in visibleRegions"
                 :key="r.id"
                 type="button"
                 :aria-pressed="selectedRegions.includes(r.id)"
@@ -341,7 +410,7 @@ onMounted(() => {
             </div>
             <div class="flex max-h-[60vh] flex-wrap gap-1.5 overflow-y-auto pr-1">
               <button
-                v-for="t in types"
+                v-for="t in visibleTypes"
                 :key="t.id"
                 type="button"
                 :aria-pressed="selectedTypes.includes(t.id)"
