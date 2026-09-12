@@ -14,6 +14,9 @@ const selectedClasses = ref<number[]>([]);
 const selectedTypes = ref<number[]>([]);
 const selectedRegions = ref<number[]>([]);
 
+// Nombre de joueurs requis pour qu'une classe ou une région soit jouable
+const MIN_PLAYERS_CLASSES_REGIONS = 5;
+
 function toggle(list: number[], id: number) {
   const i = list.indexOf(id);
   if (i === -1) list.push(id);
@@ -91,30 +94,42 @@ const filtered = computed(() =>
     .sort((a, b) => a.name.localeCompare(b.name, "fr"))
 );
 
-// Pour Classes et Régions : quels ids restent atteignables (au moins 1 champion),
-// compte tenu des AUTRES filtres actifs.
+// Classes : il faut au moins MIN_PLAYERS_CLASSES_REGIONS champions distincts
+// compatibles avec les AUTRES filtres actifs pour que la classe reste jouable.
 const availableClassIds = computed(() => {
   const ids = new Set<number>();
-  for (const champ of champions.value ?? []) {
-    if (matchesFilters(champ, { classesFilter: [] })) {
-      champ.classes.forEach((c) => ids.add(c));
+  const eligibleChampions = (champions.value ?? []).filter((champ) =>
+    matchesFilters(champ, { classesFilter: [] })
+  );
+  for (const c of classes.value ?? []) {
+    const count = eligibleChampions.filter((champ) =>
+      champ.classes.includes(c.id)
+    ).length;
+    if (count >= MIN_PLAYERS_CLASSES_REGIONS) {
+      ids.add(c.id);
     }
   }
   return ids;
 });
 
+// Régions : même principe.
 const availableRegionIds = computed(() => {
   const ids = new Set<number>();
-  for (const champ of champions.value ?? []) {
-    if (matchesFilters(champ, { regionsFilter: [] })) {
-      (champ.regions ?? []).forEach((r) => ids.add(r));
+  const eligibleChampions = (champions.value ?? []).filter((champ) =>
+    matchesFilters(champ, { regionsFilter: [] })
+  );
+  for (const r of regions.value ?? []) {
+    const count = eligibleChampions.filter((champ) =>
+      (champ.regions ?? []).includes(r.id)
+    ).length;
+    if (count >= MIN_PLAYERS_CLASSES_REGIONS) {
+      ids.add(r.id);
     }
   }
   return ids;
 });
 
-// Pour Types : il ne suffit pas d'avoir 1 champion compatible, il en faut au
-// moins "requiredPlayers" (3 ou 5) parmi les champions encore valides.
+// Types : seuil variable selon la colonne players_number ("3+" ou "5").
 const availableTypeIds = computed(() => {
   const ids = new Set<number>();
   const eligibleChampions = (champions.value ?? []).filter((champ) =>
