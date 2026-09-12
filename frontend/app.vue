@@ -2,7 +2,7 @@
 const { data: champions, pending: pC, error: eC } = useChampions();
 const { data: classes, pending: pCl, error: eCl } = useClasses();
 const { data: types, pending: pT, error: eT } = useTypes();
-const { data: regions, pending: pR, error: eR } = useRegions()
+const { data: regions, pending: pR, error: eR } = useRegions();
 
 const pending = computed(() => pC.value || pCl.value || pT.value || pR.value);
 const error = computed(() => eC.value || eCl.value || eT.value || eR.value);
@@ -11,8 +11,9 @@ const search = ref("");
 const selectedClasses = ref<number[]>([]);
 const selectedTypes = ref<number[]>([]);
 const selectedRegions = ref<number[]>([]);
+const selectedPlayerCounts = ref<string[]>([]);
 
-function toggle(list: number[], id: number) {
+function toggle<T>(list: T[], id: T) {
   const i = list.indexOf(id);
   if (i === -1) list.push(id);
   else list.splice(i, 1);
@@ -22,6 +23,7 @@ function reset() {
   selectedClasses.value = [];
   selectedTypes.value = [];
   selectedRegions.value = [];
+  selectedPlayerCounts.value = [];
   search.value = "";
 }
 
@@ -30,6 +32,7 @@ const hasFilters = computed(
     selectedClasses.value.length > 0 ||
     selectedTypes.value.length > 0 ||
     selectedRegions.value.length > 0 ||
+    selectedPlayerCounts.value.length > 0 ||
     search.value.trim() !== ""
 );
 
@@ -41,6 +44,10 @@ const typeById = computed(
 );
 const regionById = computed(
   () => new Map((regions.value ?? []).map((r) => [r.id, r]))
+);
+
+const playerCounts = computed(() =>
+  Array.from(new Set((types.value ?? []).map((t) => t.players_number))).sort()
 );
 
 const filtered = computed(() => {
@@ -57,7 +64,12 @@ const filtered = computed(() => {
       const matchRegion =
         selectedRegions.value.length === 0 ||
         selectedRegions.value.every((r) => (champ.regions ?? []).includes(r));
-      return matchName && matchClass && matchType && matchRegion;
+      const matchPlayerCount =
+        selectedPlayerCounts.value.length === 0 ||
+        selectedPlayerCounts.value.every((pn) =>
+          champ.types.some((t) => typeById.value.get(t)?.players_number === pn)
+        );
+      return matchName && matchClass && matchType && matchRegion && matchPlayerCount;
     })
     .sort((a, b) => a.name.localeCompare(b.name, "fr"));
 });
@@ -349,6 +361,39 @@ onMounted(() => {
                 @click="toggle(selectedTypes, t.id)"
               >
                 {{ t.label_fr }}
+              </button>
+            </div>
+          </section>
+
+          <section class="flex min-h-0 flex-col">
+            <div class="mb-3 flex items-center gap-2">
+              <h2
+                class="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400"
+              >
+                Nombre de joueurs
+              </h2>
+              <span
+                v-if="selectedPlayerCounts.length"
+                class="grid h-[1.15rem] min-w-[1.15rem] place-items-center rounded-full bg-purple-600 px-1.5 text-[0.68rem] font-bold text-white dark:bg-purple-500"
+              >
+                {{ selectedPlayerCounts.length }}
+              </span>
+            </div>
+            <div class="flex flex-wrap gap-1.5">
+              <button
+                v-for="pn in playerCounts"
+                :key="pn"
+                type="button"
+                :aria-pressed="selectedPlayerCounts.includes(pn)"
+                class="h-fit cursor-pointer rounded-full border px-3 py-1.5 text-[0.82rem] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20"
+                :class="
+                  selectedPlayerCounts.includes(pn)
+                    ? 'border-purple-600 bg-purple-600 text-white dark:border-purple-500 dark:bg-purple-500'
+                    : 'border-slate-200 bg-white text-slate-900 hover:border-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:border-slate-100'
+                "
+                @click="toggle(selectedPlayerCounts, pn)"
+              >
+                {{ pn }} joueurs
               </button>
             </div>
           </section>
