@@ -45,6 +45,11 @@ const regionById = computed(
   () => new Map((regions.value ?? []).map((r) => [r.id, r]))
 );
 
+// "3+" -> 3 champions minimum ; sinon on prend la valeur telle quelle (5)
+function requiredPlayers(playersNumber: string): number {
+  return playersNumber === "3+" ? 3 : Number(playersNumber);
+}
+
 // "3+" -> "3 joueurs ou +", tout le reste -> "5 joueurs"
 function playerCountLabel(playersNumber: string) {
   return playersNumber === "3+" ? "3 joueurs ou +" : "5 joueurs";
@@ -86,8 +91,8 @@ const filtered = computed(() =>
     .sort((a, b) => a.name.localeCompare(b.name, "fr"))
 );
 
-// Pour chaque facette : quels ids restent atteignables compte tenu
-// des AUTRES filtres actifs (sans tenir compte du filtre de cette facette elle-même).
+// Pour Classes et Régions : quels ids restent atteignables (au moins 1 champion),
+// compte tenu des AUTRES filtres actifs.
 const availableClassIds = computed(() => {
   const ids = new Set<number>();
   for (const champ of champions.value ?? []) {
@@ -98,21 +103,29 @@ const availableClassIds = computed(() => {
   return ids;
 });
 
-const availableTypeIds = computed(() => {
-  const ids = new Set<number>();
-  for (const champ of champions.value ?? []) {
-    if (matchesFilters(champ, { typesFilter: [] })) {
-      champ.types.forEach((t) => ids.add(t));
-    }
-  }
-  return ids;
-});
-
 const availableRegionIds = computed(() => {
   const ids = new Set<number>();
   for (const champ of champions.value ?? []) {
     if (matchesFilters(champ, { regionsFilter: [] })) {
       (champ.regions ?? []).forEach((r) => ids.add(r));
+    }
+  }
+  return ids;
+});
+
+// Pour Types : il ne suffit pas d'avoir 1 champion compatible, il en faut au
+// moins "requiredPlayers" (3 ou 5) parmi les champions encore valides.
+const availableTypeIds = computed(() => {
+  const ids = new Set<number>();
+  const eligibleChampions = (champions.value ?? []).filter((champ) =>
+    matchesFilters(champ, { typesFilter: [] })
+  );
+  for (const t of types.value ?? []) {
+    const count = eligibleChampions.filter((champ) =>
+      champ.types.includes(t.id)
+    ).length;
+    if (count >= requiredPlayers(t.players_number)) {
+      ids.add(t.id);
     }
   }
   return ids;
