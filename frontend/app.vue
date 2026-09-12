@@ -43,13 +43,10 @@ const regionById = computed(
   () => new Map((regions.value ?? []).map((r) => [r.id, r]))
 );
 
-// Types scindés en deux colonnes selon le nombre de joueurs requis
-const typesThreePlus = computed(() =>
-  (types.value ?? []).filter((t) => t.players_number === "3+")
-);
-const typesFive = computed(() =>
-  (types.value ?? []).filter((t) => t.players_number !== "3+")
-);
+// "3+" -> "3 joueurs ou +", tout le reste -> "5 joueurs"
+function playerCountLabel(playersNumber: string) {
+  return playersNumber === "3+" ? "3 joueurs ou +" : "5 joueurs";
+}
 
 const filtered = computed(() => {
   const q = search.value.trim().toLowerCase();
@@ -342,53 +339,22 @@ onMounted(() => {
                 {{ selectedTypes.length }}
               </span>
             </div>
-
-            <div class="grid grid-cols-2 gap-3">
-              <div class="flex min-w-0 flex-col gap-1.5">
-                <span
-                  class="mb-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500"
-                >
-                  3+ joueurs
-                </span>
-                <button
-                  v-for="t in typesThreePlus"
-                  :key="t.id"
-                  type="button"
-                  :aria-pressed="selectedTypes.includes(t.id)"
-                  class="cursor-pointer rounded-full border px-2.5 py-1.5 text-left text-[0.78rem] leading-tight transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20"
-                  :class="
-                    selectedTypes.includes(t.id)
-                      ? 'border-orange-600 bg-orange-600 text-white dark:border-orange-500 dark:bg-orange-500'
-                      : 'border-slate-200 bg-white text-slate-900 hover:border-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:border-slate-100'
-                  "
-                  @click="toggle(selectedTypes, t.id)"
-                >
-                  {{ t.label_fr }}
-                </button>
-              </div>
-
-              <div class="flex min-w-0 flex-col gap-1.5">
-                <span
-                  class="mb-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500"
-                >
-                  5 joueurs
-                </span>
-                <button
-                  v-for="t in typesFive"
-                  :key="t.id"
-                  type="button"
-                  :aria-pressed="selectedTypes.includes(t.id)"
-                  class="cursor-pointer rounded-full border px-2.5 py-1.5 text-left text-[0.78rem] leading-tight transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20"
-                  :class="
-                    selectedTypes.includes(t.id)
-                      ? 'border-orange-600 bg-orange-600 text-white dark:border-orange-500 dark:bg-orange-500'
-                      : 'border-slate-200 bg-white text-slate-900 hover:border-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:border-slate-100'
-                  "
-                  @click="toggle(selectedTypes, t.id)"
-                >
-                  {{ t.label_fr }}
-                </button>
-              </div>
+            <div class="flex max-h-[60vh] flex-wrap gap-1.5 overflow-y-auto pr-1">
+              <button
+                v-for="t in types"
+                :key="t.id"
+                type="button"
+                :aria-pressed="selectedTypes.includes(t.id)"
+                class="h-fit cursor-pointer rounded-full border px-3 py-1.5 text-[0.82rem] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20"
+                :class="
+                  selectedTypes.includes(t.id)
+                    ? 'border-orange-600 bg-orange-600 text-white dark:border-orange-500 dark:bg-orange-500'
+                    : 'border-slate-200 bg-white text-slate-900 hover:border-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:border-slate-100'
+                "
+                @click="toggle(selectedTypes, t.id)"
+              >
+                {{ t.label_fr }} ({{ playerCountLabel(t.players_number) }})
+              </button>
             </div>
           </section>
 
